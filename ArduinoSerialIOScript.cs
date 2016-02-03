@@ -14,6 +14,25 @@ public class ArduinoSerialIOScript : MonoBehaviour {
     const int PRESS_RIGHT_LEG = 4;
     const int PRESS_LEFT_LEG = 5;
 
+    const int DRILL_ROLL = 1;
+    const int DRILL_STOP = 3;
+    const int JACK_UP = 4;
+    const int JACK_DOWN = 5;
+    const int JACK_STOP = 6;
+    const int WINCH_UP = 7;
+    const int WINCH_DOWN = 8;
+    const int WINCH_STOP = 9;
+    const int ALL_STOP = 0;
+
+    const int FALL_START = DRILL_ROLL;
+    const int FALL_STOP = DRILL_STOP;
+    const int HEAD_UP = JACK_DOWN;
+    const int HEAD_DOWN = JACK_UP;
+    const int HEAD_STOP = JACK_STOP;
+    const int HAMMOK_DOWN = WINCH_UP;
+    const int HAMMOK_UP = WINCH_DOWN;
+    const int HAMMOK_STOP = WINCH_STOP;
+
 	int[] sensor = {0,0,0,0,1,1,0,0};//
 	int[] preSensor = {0,0,0,0,0,0,0,0};//
 	//int speed = 0;
@@ -100,7 +119,7 @@ public class ArduinoSerialIOScript : MonoBehaviour {
                 speed = mF.getSpeed(sensor); //移動判定
             } catch (NullReferenceException) {
 				Debug.Log ("error speed");
-				speed = 1;
+				speed = 0;
 			}
 		} else {
 			tF.testSerialWrite(stream1);
@@ -310,12 +329,18 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 
 	// 代入されたmodeの値に基づいてarduino DUOに首に関する信号を送る。
 	void writeArduino(int data){
-		Debug.Log ("writeArduino");
-		stream1.Write(data.ToString());
-		//stream1.Write ("1");
-		Debug.Log ("data="+data+",mode="+mode);
-		//stream1.Write ("2");
-
+        if (stream1.IsOpen)
+        {
+            Debug.Log("writeArduino");
+            stream1.Write(data.ToString());
+            //stream1.Write ("1");
+            Debug.Log("data=" + data + ",mode=" + mode);
+            //stream1.Write ("2");
+        }
+        else
+        {
+            Debug.Log("not connected serial");
+        }
 	
 	}
 

@@ -5,9 +5,10 @@ public class moveFunction : MonoBehaviour {
 	const int LEFT_HAND = 1;
 	const int RIGHT_HAND = 0;
     const int MOVE_LIMIT = 3000;
-    const int GET_LIMIT = 10;
+    const int GET_LIMIT = 20;
 	private int[] moveCount = {0,0};
     private int[] getCount = { 0, 0 };
+    private int zeroCount = 0;
 	private int speed = 0;
     
 	// Use this for initialization
@@ -50,10 +51,18 @@ public class moveFunction : MonoBehaviour {
     {
         int rightValue = _values[0];
         int leftValue = _values[1];
+        if(rightValue < 10)
+        {
+            rightValue = 0;
+        }
+        if(leftValue < 10)
+        {
+            leftValue = 0;
+        }
         float Speed = 0.0f;
         Debug.Log("getSpeed motor");
         //Debug.Log("moveRight:"+ moveCount[RIGHT_HAND]+" getRight:"+ getCount[RIGHT_HAND]);
-        if (rightValue >= leftValue && moveCount[RIGHT_HAND] < MOVE_LIMIT && getCount[RIGHT_HAND] < GET_LIMIT)
+        if (rightValue > leftValue && moveCount[RIGHT_HAND] < MOVE_LIMIT && getCount[RIGHT_HAND] < GET_LIMIT)
         {
             Debug.Log("reset Left");
             if (moveCount[LEFT_HAND] > 0 && getCount[LEFT_HAND] > 0)
@@ -78,6 +87,18 @@ public class moveFunction : MonoBehaviour {
             moveCount[LEFT_HAND] += leftValue;
             getCount[LEFT_HAND]++;
             Speed = leftValue;
+        }
+        else if(rightValue == leftValue  && rightValue == 0)
+        {
+            zeroCount++;
+        }
+        if (zeroCount > 10)
+        {
+            zeroCount = 0;
+            moveCount[RIGHT_HAND] = 0;
+            getCount[RIGHT_HAND] = 0;
+            moveCount[LEFT_HAND] = 0;
+            getCount[LEFT_HAND] = 0;
         }
         return Speed/500.0f;
     }
