@@ -6,15 +6,24 @@ using System;
 using UnityEngine.UI;
 
 public class ArduinoSerialIOScript : MonoBehaviour {
+    const int VALUE_NUM = 8;
+    const int MOVE_RIGHT_HAND = 0;
+    const int MOVE_LEFT_HAND = 1;
+    const int PRESS_RIGHT_HAND = 2;
+    const int PRESS_LEFT_HAND = 3;
+    const int PRESS_RIGHT_LEG = 4;
+    const int PRESS_LEFT_LEG = 5;
+
 	int[] sensor = {0,0,0,0,1,1,0,0};//
 	int[] preSensor = {0,0,0,0,0,0,0,0};//
-	int speed = 0;
-	Boolean fall = false;
+	//int speed = 0;
+    float speed = 0.0f;
+    Boolean fall = false;
 	int mode = 1;
 	float theta = 360.0F;
-	
-	
-	
+
+
+
 	public AudioClip audio1,audio2,audio3,audio4,audio5;
 	AudioSource audioSource;
 	/*
@@ -28,34 +37,32 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 	A3,A7 = 右足
 
 	*/
-	
+
 	//---------追加--------------
 	testFunction tF;	//テスト用関数　センサー値をキーボードで入力
 	moveFunction mF;	//移動用関数
 	canvusEnable cE;	//GAMEOVERオブジェクト取得用
 	GameObject gameOver;	//ゲームオーバーの表示用
-	
-	
+
 	const float SPEED = 0.1f;	//テスト用移動スピード
 	float fallTimer = 0.0f;	//落下までの時間カウント
 	int nowMode = 1;	//落下前の状態を保持
 	float fallAngle = 0.5f;	//落下時の回転速度
 	float serialTimer = 0.0f;
 	float[] drillTimer = {-1.0f,-1.0f,-1.0f};	//ドリルの動作時間計測
-	float[] drill = {4.5f,4.5f,0.5f};	//
-	
+	float[] drill = {3.0f,0.5f,0.5f};	//
+
 	bool first_fall = false;
 	bool startFlg = false;
 	bool safeFlg = true;
-	bool moveFlg = true;
 	//-----------------------
-	
-	
-	
-	SerialPort stream1 = new SerialPort("COM3", 115200 ); 
+
+
+
+	SerialPort stream1 = new SerialPort("COM9", 115200 );
 	//SerialPort stream2 = new SerialPort("COM4", 115200 );
-	
-	
+
+
 	void Start () {
 		//センサー入力をキーボードで代用するためシリアル通信停止
 		//OpenConnection (stream1);
@@ -64,8 +71,9 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 		mF = GetComponent<moveFunction> ();
 		gameOver = GameObject.Find ("GAMEOVER");
 		cE = gameOver.GetComponent<canvusEnable> ();
+
 		audioSource = gameObject.GetComponent<AudioSource>();
-		
+
 		first_fall = true;
 	}
 	void Update () {
@@ -73,8 +81,6 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 			startFlg = true;
 		}
 		//readSensor ();
-
-
 		try {
 			sensor = tF.GetSensorValues ();	//センサー値(ダミー)を受け取り
 		} catch (NullReferenceException) {
@@ -83,15 +89,16 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 		if (safeFlg) {
 			tF.testPressValue (ref sensor);
 		}
-		
-		tF.testSerialWrite (stream1);
+
+		//tF.testSerialWrite (stream1);
 		//Debug.Log("4&5:"+sensor[4]+","+sensor[5]);
-		
+
 		if (startFlg) {
 			//getSpeed();	//移動判定を別のスクリプトへ
 			try {
-				speed = mF.getSpeed (sensor, preSensor);	//移動判定
-			} catch (NullReferenceException) {
+                //speed = mF.getSpeed (sensor, preSensor);	//移動判定
+                speed = mF.getSpeed(sensor); //移動判定
+            } catch (NullReferenceException) {
 				Debug.Log ("error speed");
 				speed = 1;
 			}
@@ -99,35 +106,33 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 			tF.testSerialWrite(stream1);
 		}
 		//Debug.Log ("speed="+speed);
-		//本番は消す　テスト用
-		if (Input.GetKeyDown(KeyCode.F)) {
-			//Fall();
-			mode=3;
-			fallTimer = 2.0f;
-		}
 		switch (mode) {
-		case 1:
-		case 2:
-			fallTimer = 0.0f;
-			move ();
-			break;
-		case 3:	//落ちそうな状態
+			case 1:
+			case 2:
+				fallTimer = 0.0f;
+				move ();
+				break;
+			case 3:	//落ちそうな状態
 			fallTimer+=Time.deltaTime;	//手を離してからの時間を取得
 			break;
-		case 4:	//落下
-			Fall();
-			if(serialTimer > 0.45f && serialTimer != -1.0f){
-				writeArduino(2);
-				serialTimer = -1.0f;
-			}
-			else {
-				serialTimer+=Time.deltaTime;	
-			}
-			break;
+			case 4:	//落下
+				Fall();
+				if(serialTimer > 0.45f && serialTimer != -1.0f){
+					writeArduino(2);
+					serialTimer = -1.0f;
+				}
+				else {
+					serialTimer+=Time.deltaTime;	
+				}
+				break;
 		default:
 			break;
 		}
-		
+		//本番は消す　テスト用
+		if (Input.GetKey (KeyCode.F)) {
+			//Fall();
+			mode=4;
+		}
 		
 		touch_sound ();
 		if (drillTimer[0] != -1.0f) {
@@ -147,15 +152,15 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 				drillTimer[0] = -1.0f;
 			}
 		}
-		
+
 		judge_fall ();
-		print (fallTimer);	//手を離してからの時間を表示
-		
+		//print (fallTimer);	//手を離してからの時間を表示
+
 		
 		for(int i = 0;i<8;i++){
 			preSensor[i] = sensor[i];
 		}
-		
+
 	}
 	void judge_fall(){
 		//A4 左手 A5 右手　A6左足 A7右足として　コーディングしている
@@ -174,32 +179,30 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 			Debug.Log("ok");
 			mode = nowMode;
 		}
-		
+
 		else if(mode < 3){
 			//落下しそう
 			Debug.Log("Rerease");
 			mode = 3;
-			
+
 			//Fall();
 		}
-		
+
 		if (mode == 3 && fallTimer > 1.0f) {
 			Debug.Log ("Fall");
-			
+
 			mode = 4;
 			nowMode = 4;
 			while(true){
 				try{
 					Debug.Log ("write_Start");
 					writeArduino(1);
-					writeArduino(7);
 
-					
 				}
 				catch(TimeoutException){
 					Debug.Log ("error write");
 				}
-				break;
+			break;
 			}
 		}
 	}
@@ -220,8 +223,8 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 				audioSource.PlayOneShot(audio4);
 				break;
 			}
-			
-			
+
+
 		}
 	}
 	void Fall(){
@@ -230,152 +233,121 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 			audioSource.clip = audio5;
 			audioSource.Play ();
 		}
-		if (theta > 270) {
+		if(theta > 270){
 			theta = theta - fallAngle;	//後ろに倒れる速度を変更できるように
-		} else {
-			mode = 5;
 		}
 		transform.localRotation = Quaternion.Euler(theta, 270, 0);
 		Rigidbody rb = GetComponent<Rigidbody> ();
 		rb.useGravity = true;
-		
-		//		if(mode != nowMode)
-		mode = 4;
-		
+
+//		if(mode != nowMode)
+			mode = 4;
+
 		Debug.Log ("fall end");
-		
+
 	}
-	
+
 	void OnCollisionEnter(Collision c){
 		if (c.gameObject.tag == "Kabe1") {
-			Destroy (c.gameObject);
-			transform.localRotation = Quaternion.Euler (270, 270, 0);
+			Destroy(c.gameObject);
+			transform.localRotation = Quaternion.Euler(270, 270, 0);
 			mode = 2;
 			safeFlg = false;
-			
+
 			nowMode = mode;
-			Debug.Log ("write = 5");
-			drillTimer [0] = 0.0f;
-			writeArduino (5);
-		} else if (c.gameObject.tag == "Kabe2") {
-			Debug.Log ("colision Kabe2:1");
-			writeArduino (6);
-			Destroy (c.gameObject);
-			transform.localRotation = Quaternion.Euler (0, 270, 0);
+			drillTimer[0] = 0.0f;
+			writeArduino(5);
+		}
+		else if (c.gameObject.tag == "Kabe2") {
+			Destroy(c.gameObject);
+			transform.localRotation = Quaternion.Euler(0, 270, 0);
 			mode = 1;
-			Debug.Log ("colision Kabe2;2");
+
 			//正転　下がる
 			//逆転　上がる
 			nowMode = mode;
-			Debug.Log ("write = 3");
-			drillTimer [0] = 0.0f;
-			writeArduino (3);
-			
-		} else if (c.gameObject.tag == "Kabe3") {
-			Destroy (c.gameObject);
-			
-		} else if (c.gameObject.tag == "Yuka") {
-			audioSource.Stop ();
-			cE.enableCanvus ();	//ゲームオーバーの表示
+
+			drillTimer[0] = 0.0f;
+			writeArduino(3);
+
+		}
+		else if (c.gameObject.tag == "Kabe3") {
+			Destroy(c.gameObject);
+
+		}
+		else if (c.gameObject.tag == "Yuka") {
+			audioSource.Stop();
+			cE.enableCanvus();	//ゲームオーバーの表示
 			fallAngle = 30.0f;	//後ろに倒れる速度を加速
-			writeArduino(8);
-		} else if (c.gameObject.tag == "Goal") {
-			moveFlg = false;
 		}
 	}
 	
-	
+
 	void readSensor(){
 		string result1="";
 		try{
-			result1 = stream1.ReadLine();
-			//Debug.Log(result1);
-			string[] tmpSen = result1.Split(',');
-			
-			try{
-				for (int i = 0; i<8; i++) {
-					sensor[i] = int.Parse(tmpSen[i]);
-					//Debug.Log ("sen"+i+" "+sensor[i]);
-				}
+		result1 = stream1.ReadLine();
+		//Debug.Log(result1);
+		string[] tmpSen = result1.Split(',');
+		
+		try{
+			for (int i = 0; i<VALUE_NUM; i++) {
+				sensor[i] = int.Parse(tmpSen[i]);
+				//Debug.Log ("sen"+i+" "+sensor[i]);
+			}
 				Debug.Log ("getValue");
-			}
-			catch(FormatException){
-			}
-			catch(IndexOutOfRangeException){
-			}
+		}
+		catch(FormatException){
+		}
+		catch(IndexOutOfRangeException){
+		}
 		}
 		catch(TimeoutException){
 			Debug.Log ("time out");
 		}
 	}
-	
-	
+
+
 	// 代入されたmodeの値に基づいてarduino DUOに首に関する信号を送る。
 	void writeArduino(int data){
-		if (stream1.IsOpen) {
-			Debug.Log ("writeArduino");
-			while (true) {
-				try {
-					stream1.Write (data.ToString ());
-					Debug.Log ("data=" + data + ",mode=" + mode);
-					break;
-				} catch (TimeoutException) {
-					Debug.Log ("write timeout");
-				}//stream1.Write ("1");
-			}
-		
-			Debug.Log ("data=" + data + ",mode=" + mode + " complete");
-			//stream1.Write ("2");
-		} else {
-			Debug.Log ("not connected Arduino");
-		}
-		
-	}
+		Debug.Log ("writeArduino");
+		stream1.Write(data.ToString());
+		//stream1.Write ("1");
+		Debug.Log ("data="+data+",mode="+mode);
+		//stream1.Write ("2");
+
 	
+	}
+
 	void streamClear(){
-		
+
 		//stream2.WriteLine ("");
 	}
-	
-	//-------------使用していない,moveFunction.csに移動---------
-	void getSpeed(){
-		//A0 左手 A1 右手　A2左足 A3右足として　コーディングしている
-		if (sensor[1] != preSensor[1] && sensor[2] != preSensor[2]
-		    ||sensor[0] != preSensor[0] && sensor[3] != preSensor[3]) {
-			speed++;
-		}
-		else if(sensor[2] != preSensor[2] || sensor[3] != preSensor[3]){
-			//speed+=10;
-		}
-		else if(speed != 0){
-			speed--;
-		}
-	}
-	//---------------------------------------------
-	
+
+
 	void move(){
 		if(!fall){
-			if( speed > 0 && moveFlg){//Input.GetKey(KeyCode.Space )|| speed >0){
+			if( speed > 0){//Input.GetKey(KeyCode.Space )|| speed >0){
 				switch(mode){
 				case 1:
-					transform.localPosition += new Vector3(0,SPEED,0);	//移動速度を定数化,テスト用
+					transform.localPosition += new Vector3(0,speed,0);
 					break;
 				case 2:
-					transform.localPosition += new Vector3(SPEED,0,0);
+					transform.localPosition += new Vector3(speed,0,0);
 					break;
 				}
 			}
 		}
-		
+
 	}
 	
 	void OnApplicationQuit(){
 		stream1.Close();
-		
+
 		//stream2.Close ();
-		
+
 	}
-	
+
 	void OpenConnection(SerialPort _stream) {
 		
 		if (_stream != null) {
@@ -386,12 +358,12 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 			} else {
 				_stream.Open ();
 				_stream.ReadTimeout = 10;
-				_stream.WriteTimeout = 40;
+				_stream.WriteTimeout = 10;
 				
 				Debug.Log ("Open Serial port1");      
 			}
 		}
-		
+
 	}
-	
+
 }
