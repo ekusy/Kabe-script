@@ -183,22 +183,21 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 	}
 	void judge_fall(){
 		//A4 左手 A5 右手　A6左足 A7右足として　コーディングしている
-		if (sensor [4] == 1 && sensor [5] == 1 && sensor[6] == 1 && sensor[7] == 1 ) {
+		if (sensor [PRESS_LEFT_HAND] == 1 && sensor [PRESS_RIGHT_HAND] == 1 && sensor[PRESS_LEFT_LEG] == 1 && sensor[PRESS_RIGHT_LEG] == 1 ) {
 			//全部手足ついてる状態
 			Debug.Log ("All");
 			mode = nowMode;		
 		} 
-		else if(sensor [4] == 1 && sensor[7] == 1 || sensor [5] == 1 && sensor[6] == 1){
+		else if(sensor [PRESS_LEFT_HAND] == 1 && sensor[PRESS_RIGHT_LEG] == 1 || sensor [PRESS_RIGHT_HAND] == 1 && sensor[PRESS_LEFT_LEG] == 1){
 			//対角線手足セットパターン
 			Debug.Log ("Diagnoal");
 			mode = nowMode;
 		}
-		if(sensor[4] == 1 || sensor[5] == 1){
+		else if(sensor[PRESS_RIGHT_HAND] == 1 || sensor[PRESS_LEFT_HAND] == 1){
 			//手テスト
 			Debug.Log("ok");
 			mode = nowMode;
 		}
-
 		else if(mode < 3){
 			//落下しそう
 			Debug.Log("Rerease");
