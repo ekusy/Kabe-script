@@ -6,7 +6,7 @@ using System;
 using UnityEngine.UI;
 
 public class ArduinoSerialIOScript : MonoBehaviour {
-    const int VALUE_NUM = 8;
+    const int VALUE_NUM = 6;
     const int MOVE_RIGHT_HAND = 0;
     const int MOVE_LEFT_HAND = 1;
     const int PRESS_RIGHT_HAND = 2;
@@ -14,27 +14,34 @@ public class ArduinoSerialIOScript : MonoBehaviour {
     const int PRESS_RIGHT_LEG = 4;
     const int PRESS_LEFT_LEG = 5;
 
-    const int DRILL_ROLL = 1;
-    const int DRILL_STOP = 3;
-    const int JACK_UP = 4;
-    const int JACK_DOWN = 5;
-    const int JACK_STOP = 6;
-    const int WINCH_UP = 7;
-    const int WINCH_DOWN = 8;
-    const int WINCH_STOP = 9;
-    const int ALL_STOP = 0;
+    const char DRILL_ROLL = '1';
+    const char DRILL_STOP = '3';
+    const char JACK_UP = '4';
+    const char JACK_DOWN = '5';
+    const char JACK_STOP = '6';
+    const char WINCH_UP = '7';
+    const char WINCH_DOWN = '8';
+    const char WINCH_STOP = '9';
+    const char ALL_STOP = '0';
 
-    const int FALL_START = DRILL_ROLL;
-    const int FALL_STOP = DRILL_STOP;
-    const int HEAD_UP = JACK_DOWN;
-    const int HEAD_DOWN = JACK_UP;
-    const int HEAD_STOP = JACK_STOP;
-    const int HAMMOK_DOWN = WINCH_UP;
-    const int HAMMOK_UP = WINCH_DOWN;
-    const int HAMMOK_STOP = WINCH_STOP;
+    const char FALL_START = DRILL_ROLL;
+    const char FALL_STOP = DRILL_STOP;
+    const char HEAD_UP = JACK_UP;
+    const char HEAD_DOWN = JACK_DOWN;
+    const char HEAD_STOP = JACK_STOP;
+    const char HAMMOK_DOWN = WINCH_DOWN;
+    const char HAMMOK_UP = WINCH_UP;
+    const char HAMMOK_STOP = WINCH_STOP;
 
-	int[] sensor = {0,0,0,0,1,1,0,0};//
-	int[] preSensor = {0,0,0,0,0,0,0,0};//
+    const int MODE_WALL = 1;
+    const int MODE_CEILING = 2;
+    const int MODE_DANGER = 3;
+    const int MODE_FALL = 4;
+
+
+
+    int[] sensor = {0,0,1,1,1,1};//
+	int[] preSensor = {0,0,0,0,0,0};//
 	//int speed = 0;
     float speed = 0.0f;
     Boolean fall = false;
@@ -109,7 +116,7 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 			tF.testPressValue (ref sensor);
 		}
 
-		//tF.testSerialWrite (stream1);
+		tF.testSerialWrite (stream1);
 		//Debug.Log("4&5:"+sensor[4]+","+sensor[5]);
 
 		if (startFlg) {
@@ -126,18 +133,18 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 		}
 		//Debug.Log ("speed="+speed);
 		switch (mode) {
-			case 1:
-			case 2:
+			case MODE_WALL:
+			case MODE_CEILING:
 				fallTimer = 0.0f;
 				move ();
 				break;
-			case 3:	//落ちそうな状態
+			case MODE_DANGER:	//落ちそうな状態
 			fallTimer+=Time.deltaTime;	//手を離してからの時間を取得
 			break;
-			case 4:	//落下
+			case MODE_FALL:	//落下
 				Fall();
 				if(serialTimer > 0.45f && serialTimer != -1.0f){
-					writeArduino(2);
+					writeArduino(FALL_STOP);
 					serialTimer = -1.0f;
 				}
 				else {
@@ -150,24 +157,25 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 		//本番は消す　テスト用
 		if (Input.GetKey (KeyCode.F)) {
 			//Fall();
-			mode=4;
+			mode=MODE_FALL;
 		}
 		
 		touch_sound ();
+
 		if (drillTimer[0] != -1.0f) {
 			drillTimer[0]+=Time.deltaTime;
 			if(drillTimer[0] > drill[0]){
-				if(mode == 1){
-					writeArduino(4);
+				if(mode == MODE_WALL){
+					writeArduino(HEAD_STOP);
 					drillTimer[0] = -1.0f;
 				}
-				else if(mode == 2){
-					writeArduino(6);
+				else if(mode == MODE_CEILING){
+					writeArduino(HEAD_STOP);
 					drillTimer[0] = -1.0f;
 				}
 			}
-			if(mode>2){
-				writeArduino(6);
+			if(mode!=MODE_CEILING && mode != MODE_WALL){
+				writeArduino(HEAD_STOP);
 				drillTimer[0] = -1.0f;
 			}
 		}
@@ -176,13 +184,12 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 		//print (fallTimer);	//手を離してからの時間を表示
 
 		
-		for(int i = 0;i<8;i++){
+		for(int i = 0;i<VALUE_NUM;i++){
 			preSensor[i] = sensor[i];
 		}
 
 	}
 	void judge_fall(){
-		//A4 左手 A5 右手　A6左足 A7右足として　コーディングしている
 		if (sensor [PRESS_LEFT_HAND] == 1 && sensor [PRESS_RIGHT_HAND] == 1 && sensor[PRESS_LEFT_LEG] == 1 && sensor[PRESS_RIGHT_LEG] == 1 ) {
 			//全部手足ついてる状態
 			Debug.Log ("All");
@@ -214,7 +221,7 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 			while(true){
 				try{
 					Debug.Log ("write_Start");
-					writeArduino(1);
+					writeArduino(FALL_START);
 
 				}
 				catch(TimeoutException){
@@ -266,41 +273,39 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 	}
 
 	void OnCollisionEnter(Collision c){
-		if (c.gameObject.tag == "Kabe1") {
-			Destroy(c.gameObject);
-			transform.localRotation = Quaternion.Euler(270, 270, 0);
-			mode = 2;
-			safeFlg = false;
+		if (c.gameObject.tag == "Kabe1") {  //最初の壁から天井へ
+			Destroy(c.gameObject);  //検出用のオブジェクトを消去
+			transform.localRotation = Quaternion.Euler(270, 270, 0);    //プレイヤーの角度を変更
+			mode = 2;   //モードを天井に
+			safeFlg = false;    //落下するように
 
-			nowMode = mode;
-			drillTimer[0] = 0.0f;
-			writeArduino(5);
+			nowMode = mode; //現在のモード保持変数にモードを代入
+			drillTimer[0] = 0.0f;   //頭上下用のドリルのタイマー起動
+			writeArduino(HEAD_DOWN);    //ドリルを動かして頭を下げる
 		}
-		else if (c.gameObject.tag == "Kabe2") {
-			Destroy(c.gameObject);
-			transform.localRotation = Quaternion.Euler(0, 270, 0);
-			mode = 1;
+		else if (c.gameObject.tag == "Kabe2") { //天井から壁へ
+			Destroy(c.gameObject);  //検出用オブジェクトを消去
+			transform.localRotation = Quaternion.Euler(0, 270, 0);  //プレイヤーの角度を変更   
+			mode = 1;   //モードを壁に
 
 			//正転　下がる
 			//逆転　上がる
-			nowMode = mode;
+			nowMode = mode; //現在のモード保持変数にモードを代入
 
-			drillTimer[0] = 0.0f;
-			writeArduino(3);
-
-		}
-		else if (c.gameObject.tag == "Kabe3") {
-			Destroy(c.gameObject);
+			drillTimer[0] = 0.0f;   //頭上下用のドリルのタイマー起動
+			writeArduino(HEAD_UP);  //ドリルを動かして頭を上げる
 
 		}
-		else if (c.gameObject.tag == "Yuka") {
-			audioSource.Stop();
+		else if (c.gameObject.tag == "Kabe3") { //Kabe3の用途とは一体…
+			Destroy(c.gameObject);  //
+
+		}
+		else if (c.gameObject.tag == "Yuka") {  //地面に接触したら
+			audioSource.Stop(); //音（環境音？）を停止
 			cE.enableCanvus();	//ゲームオーバーの表示
 			fallAngle = 30.0f;	//後ろに倒れる速度を加速
 		}
 	}
-	
-
 	void readSensor(){
 		string result1="";
 		try{
@@ -324,9 +329,6 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 			Debug.Log ("time out");
 		}
 	}
-
-
-	// 代入されたmodeの値に基づいてarduino DUOに首に関する信号を送る。
 	void writeArduino(int data){
         if (stream1.IsOpen)
         {
@@ -342,14 +344,35 @@ public class ArduinoSerialIOScript : MonoBehaviour {
         }
 	
 	}
-
-	void streamClear(){
+    void writeArduino(char _data)
+    {
+        if (stream1.IsOpen)
+        {
+            while (true)
+            {
+                try
+                {
+                    stream1.Write(_data.ToString());
+                    Debug.Log("write：" + _data + " mode：" + mode);
+                    
+                }
+                catch(TimeoutException e)
+                {
+                    Debug.Log("time out Write："+_data);
+                }
+                break;
+            }
+        }
+        else
+        {
+            Debug.Log("not connected serial");
+        }
+    }
+    void streamClear(){
 
 		//stream2.WriteLine ("");
 	}
-
-
-	void move(){
+    void move(){
 		if(!fall){
 			if( speed > 0){//Input.GetKey(KeyCode.Space )|| speed >0){
 				switch(mode){
@@ -364,18 +387,14 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 		}
 
 	}
-	
 	void OnApplicationQuit(){
 		stream1.Close();
 
 		//stream2.Close ();
 
 	}
-
-	void OpenConnection(SerialPort _stream) {
-		
+    void OpenConnection(SerialPort _stream) {
 		if (_stream != null) {
-			
 			if (_stream.IsOpen) {
 				_stream.Close ();
 				Debug.LogError ("Failed to open Serial Port, already open!");
@@ -383,7 +402,6 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 				_stream.Open ();
 				_stream.ReadTimeout = 10;
 				_stream.WriteTimeout = 10;
-				
 				Debug.Log ("Open Serial port1");      
 			}
 		}

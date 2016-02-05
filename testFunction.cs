@@ -5,43 +5,29 @@ using System;
 using System.IO.Ports;
 
 public class testFunction : MonoBehaviour {
-	public int[] sensorValue = {0,0,0,0,1,1,1,1};
+    const char DRILL_ROLL = '1';
+    const char DRILL_STOP = '3';
+    const char JACK_UP = '4';
+    const char JACK_DOWN = '5';
+    const char JACK_STOP = '6';
+    const char WINCH_UP = '7';
+    const char WINCH_DOWN = '8';
+    const char WINCH_STOP = '9';
+    const char ALL_STOP = '0';
+
+    public int[] sensorValue = {1,1,1,1,1,1};
     bool changeFlg = false;
 	// Use this for initialization
 	void Start () {
-	
-	}
-	
-	// Update is called once per frame
-	void Update () {
-        //InputSensorValue ();
+        for(int i = 0; i < 6; i++)
+        {
+            sensorValue[i] = 1;
+        }
+    }
+
+    // Update is called once per frame
+    void Update () {
         getTestValue();
-	}
-
-	void InputSensorValue(){	//それぞれ0~7を入力するとセンサーの値が切り替わる
-		if(Input.GetKeyDown(KeyCode.Alpha0))
-			ChangeSensorValue(ref sensorValue[0]);
-		if(Input.GetKeyDown(KeyCode.Alpha1))
-			ChangeSensorValue(ref sensorValue[1]);
-		if(Input.GetKeyDown(KeyCode.Alpha2))
-			ChangeSensorValue(ref sensorValue[2]);
-		if(Input.GetKeyDown(KeyCode.Alpha3))
-			ChangeSensorValue(ref sensorValue[3]);
-		if(Input.GetKeyDown(KeyCode.Alpha4))
-			ChangeSensorValue(ref sensorValue[4]);
-		if(Input.GetKeyDown(KeyCode.Alpha5))
-			ChangeSensorValue(ref sensorValue[5]);
-		if(Input.GetKeyDown(KeyCode.Alpha6))
-			ChangeSensorValue(ref sensorValue[6]);
-		if(Input.GetKeyDown(KeyCode.Alpha7))
-			ChangeSensorValue(ref sensorValue[7]);
-
-		string values = string.Format ("{0},{1},{2},{3},{4},{5},{6},{7}",
-		                               sensorValue[0],sensorValue[1],sensorValue[2],sensorValue[3],
-		                               sensorValue[4],sensorValue[5],sensorValue[6],sensorValue[7]);
-		//Debug.Log (values);
-		//print (values);
-
 	}
     void getTestValue()
     {
@@ -60,7 +46,7 @@ public class testFunction : MonoBehaviour {
         {
             if(value1 < value2)
             {
-                Debug.Log("value1 < value2");
+                //Debug.Log("value1 < value2");
                 int tmp = value1;
                 value1 = value2;
                 value2 = tmp;
@@ -77,7 +63,9 @@ public class testFunction : MonoBehaviour {
         }
         sensorValue[0] = value1;
         sensorValue[1] = value2;
-        ChangeSensorValue(ref sensorValue[2]);
+        
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+            ChangeSensorValue(ref sensorValue[2]);
         if (Input.GetKeyDown(KeyCode.Alpha3))
             ChangeSensorValue(ref sensorValue[3]);
         if (Input.GetKeyDown(KeyCode.Alpha4))
@@ -85,9 +73,9 @@ public class testFunction : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.Alpha5))
             ChangeSensorValue(ref sensorValue[5]);
         //Debug.Log("getTestValue");
-        string values = string.Format("{0},{1},{2},{3},{4},{5},{6},{7}",
+        string values = string.Format("{0},{1},{2},{3},{4},{5}",
                                sensorValue[0], sensorValue[1], sensorValue[2], sensorValue[3],
-                               sensorValue[4], sensorValue[5], sensorValue[6], sensorValue[7]);
+                               sensorValue[4], sensorValue[5]);
         //Debug.Log(values);
 
         if (Input.GetKeyDown(KeyCode.C))
@@ -101,37 +89,90 @@ public class testFunction : MonoBehaviour {
 		else
 			value = 0;
 	}
-
 	public void testPressValue(ref int[] _values){
-		_values [4] = 1;
+        _values[2] = 1;
+        _values[3] = 1;
+        _values [4] = 1;
 		_values [5] = 1;
-		_values [6] = 1;
-		_values [7] = 1;
+		
 	}
-
 	public int [] GetSensorValues(){
 		return sensorValue;
 	}
-
 	public void testSerialWrite(SerialPort _stream){
-		if (_stream.IsOpen) {
-			if (Input.GetKeyDown (KeyCode.Q)) {
-				_stream.Write ("3");
-				Debug.Log ("3");
-			} else if (Input.GetKeyUp (KeyCode.Q)) {
-				_stream.Write ("4");
-				Debug.Log ("4");
+		//if (_stream.IsOpen) {
+			if (Input.GetKey (KeyCode.J)) {
+                if (Input.GetKeyDown(KeyCode.S))
+                {
+                    writeArduino(JACK_STOP,_stream);
+                    Debug.Log("JACK_STOP");
+                }
+                else if (Input.GetKeyDown(KeyCode.D))
+                {
+                    writeArduino(JACK_DOWN,_stream);
+                    Debug.Log("JACK_DOWN");
+                }
+                else if (Input.GetKeyDown(KeyCode.U))
+                {
+                    writeArduino(JACK_UP,_stream);
+                    Debug.Log("JACK_UP");
+                }
 			}
-
-			else if (Input.GetKeyDown (KeyCode.O)) {
-				_stream.Write ("5");
-				Debug.Log ("5");
-			} else if (Input.GetKeyUp (KeyCode.O)) {
-				_stream.Write ("6");
-				Debug.Log ("6");
-			}
-		}
+            else if (Input.GetKey(KeyCode.W))
+            {
+                if (Input.GetKeyDown(KeyCode.S))
+                {
+                    writeArduino(WINCH_STOP,_stream);
+                    Debug.Log("WINCH_STOP");
+                }
+                else if (Input.GetKeyDown(KeyCode.D))
+                {
+                    writeArduino(WINCH_DOWN,_stream);
+                    Debug.Log("WINCH_DOWN");
+                }
+                else if (Input.GetKeyDown(KeyCode.U))
+                {
+                    writeArduino(WINCH_UP,_stream);
+                    Debug.Log("WINCH_UP");
+                }
+            }
+            else if (Input.GetKey(KeyCode.D))
+            {
+                if (Input.GetKeyDown(KeyCode.S))
+                {
+                    writeArduino(DRILL_STOP,_stream);
+                    Debug.Log("DRILL_STOP");
+                }
+                else if (Input.GetKeyDown(KeyCode.R))
+                {
+                    writeArduino(DRILL_ROLL,_stream);
+                    Debug.Log("DRILL_ROLL");
+                }
+                
+            }
+        //}
 	}
+    void writeArduino(char _data,SerialPort stream1)
+    {
+        if (stream1.IsOpen)
+        {
+            while (true)
+            {
+                try
+                {
+                    stream1.Write(_data.ToString());
 
-
+                }
+                catch (TimeoutException e)
+                {
+                    Debug.Log("time out Write：" + _data);
+                }
+                break;
+            }
+        }
+        else
+        {
+            Debug.Log("not connected serial");
+        }
+    }
 }
