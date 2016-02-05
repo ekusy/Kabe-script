@@ -24,7 +24,6 @@ public class testFunction : MonoBehaviour {
             sensorValue[i] = 1;
         }
     }
-
     // Update is called once per frame
     void Update () {
         getTestValue();
@@ -167,6 +166,7 @@ public class testFunction : MonoBehaviour {
                 {
                     Debug.Log("time out Write：" + _data);
                 }
+                Debug.Log("OK test serial,send:" + _data.ToString());
                 break;
             }
         }

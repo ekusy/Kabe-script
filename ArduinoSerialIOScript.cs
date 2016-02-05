@@ -6,7 +6,10 @@ using System;
 using UnityEngine.UI;
 
 public class ArduinoSerialIOScript : MonoBehaviour {
+    //arduinoから受け取るセンサの値の数
     const int VALUE_NUM = 6;
+
+    //各センサの値の添字
     const int MOVE_RIGHT_HAND = 0;
     const int MOVE_LEFT_HAND = 1;
     const int PRESS_RIGHT_HAND = 2;
@@ -14,6 +17,7 @@ public class ArduinoSerialIOScript : MonoBehaviour {
     const int PRESS_RIGHT_LEG = 4;
     const int PRESS_LEFT_LEG = 5;
 
+    //arduinoに送信する指示と値
     const char DRILL_ROLL = '1';
     const char DRILL_STOP = '3';
     const char JACK_UP = '4';
@@ -24,6 +28,7 @@ public class ArduinoSerialIOScript : MonoBehaviour {
     const char WINCH_STOP = '9';
     const char ALL_STOP = '0';
 
+    //各動作と機構の対応
     const char FALL_START = DRILL_ROLL;
     const char FALL_STOP = DRILL_STOP;
     const char HEAD_UP = JACK_UP;
@@ -33,6 +38,7 @@ public class ArduinoSerialIOScript : MonoBehaviour {
     const char HAMMOK_UP = WINCH_UP;
     const char HAMMOK_STOP = WINCH_STOP;
 
+    //プレイヤーの状態
     const int MODE_WALL = 1;
     const int MODE_CEILING = 2;
     const int MODE_DANGER = 3;
@@ -85,13 +91,13 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 
 
 
-	SerialPort stream1 = new SerialPort("COM9", 115200 );
+	SerialPort stream1 = new SerialPort("COM4", 9600 );
 	//SerialPort stream2 = new SerialPort("COM4", 115200 );
 
 
 	void Start () {
 		//センサー入力をキーボードで代用するためシリアル通信停止
-		//OpenConnection (stream1);
+		OpenConnection (stream1);
 		//各種スクリプトを使用可能に
 		tF = GetComponent<testFunction> ();
 		mF = GetComponent<moveFunction> ();
@@ -103,9 +109,10 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 		first_fall = true;
 	}
 	void Update () {
-		if (Input.GetKeyDown (KeyCode.S)) {
+		if (Input.GetKeyDown (KeyCode.Space)) {
 			startFlg = true;
 		}
+        //--------arduinoから値を受け取るときはreadSensorを、テスト用の値を使うときはtF.GetSensorValuesを使う
 		//readSensor ();
 		try {
 			sensor = tF.GetSensorValues ();	//センサー値(ダミー)を受け取り
@@ -308,26 +315,35 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 	}
 	void readSensor(){
 		string result1="";
-		try{
-		result1 = stream1.ReadLine();
-		//Debug.Log(result1);
-		string[] tmpSen = result1.Split(',');
-		
-		try{
-			for (int i = 0; i<VALUE_NUM; i++) {
-				sensor[i] = int.Parse(tmpSen[i]);
-				//Debug.Log ("sen"+i+" "+sensor[i]);
-			}
-				Debug.Log ("getValue");
-		}
-		catch(FormatException){
-		}
-		catch(IndexOutOfRangeException){
-		}
-		}
-		catch(TimeoutException){
-			Debug.Log ("time out");
-		}
+        try
+        {
+            result1 = stream1.ReadLine();
+            //Debug.Log(result1);
+            string[] tmpSen = result1.Split(',');
+            if (tmpSen.Length == 6)
+            {
+                try
+                {
+                    for (int i = 0; i < VALUE_NUM; i++)
+                    {
+                        sensor[i] = int.Parse(tmpSen[i]);
+                        //Debug.Log ("sen"+i+" "+sensor[i]);
+                    }
+                    Debug.Log("getValue");
+                }
+                catch (FormatException)
+                {
+                }
+                catch (IndexOutOfRangeException)
+                {
+                }
+            }
+        }
+        catch (TimeoutException)
+        {
+            Debug.Log("time out read");
+        }
+
 	}
 	void writeArduino(int data){
         if (stream1.IsOpen)
