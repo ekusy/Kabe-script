@@ -74,6 +74,7 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 	testFunction tF;	//テスト用関数　センサー値をキーボードで入力
 	moveFunction mF;	//移動用関数
 	canvusEnable cE;	//GAMEOVERオブジェクト取得用
+    motionFunction motionF;
 	GameObject gameOver;	//ゲームオーバーの表示用
 
 	const float SPEED = 0.1f;	//テスト用移動スピード
@@ -101,6 +102,8 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 		//各種スクリプトを使用可能に
 		tF = GetComponent<testFunction> ();
 		mF = GetComponent<moveFunction> ();
+        GameObject tmp = GameObject.Find("itirenn(kihon)");
+        motionF = tmp.GetComponent<motionFunction>();
 		gameOver = GameObject.Find ("GAMEOVER");
 		cE = gameOver.GetComponent<canvusEnable> ();
 
@@ -110,6 +113,7 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 	}
 	void Update () {
 		if (Input.GetKeyDown (KeyCode.Space)) {
+            Debug.Log("start");
 			startFlg = true;
 		}
         //--------arduinoから値を受け取るときはreadSensorを、テスト用の値を使うときはtF.GetSensorValuesを使う
@@ -120,17 +124,29 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 			Debug.Log ("error sensor");
 		}
 		if (safeFlg) {
-			tF.testPressValue (ref sensor);
+            try {
+                tF.testPressValue(ref sensor);
+            }
+            catch (NullReferenceException)
+            {
+                Debug.Log("error testPress");
+            }
 		}
-
-		tF.testSerialWrite (stream1);
+        try {
+            tF.testSerialWrite(stream1);
+        }
+        catch (NullReferenceException){
+            Debug.Log("error test serial");
+        }
 		//Debug.Log("4&5:"+sensor[4]+","+sensor[5]);
 
 		if (startFlg) {
 			//getSpeed();	//移動判定を別のスクリプトへ
 			try {
+                //Debug.Log("speed get");
                 //speed = mF.getSpeed (sensor, preSensor);	//移動判定
                 speed = mF.getSpeed(sensor); //移動判定
+                //Debug.Log("speed = " + speed);
             } catch (NullReferenceException) {
 				Debug.Log ("error speed");
 				speed = 0;
@@ -199,22 +215,22 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 	void judge_fall(){
 		if (sensor [PRESS_LEFT_HAND] == 1 && sensor [PRESS_RIGHT_HAND] == 1 && sensor[PRESS_LEFT_LEG] == 1 && sensor[PRESS_RIGHT_LEG] == 1 ) {
 			//全部手足ついてる状態
-			Debug.Log ("All");
+			//Debug.Log ("All");
 			mode = nowMode;		
 		} 
 		else if(sensor [PRESS_LEFT_HAND] == 1 && sensor[PRESS_RIGHT_LEG] == 1 || sensor [PRESS_RIGHT_HAND] == 1 && sensor[PRESS_LEFT_LEG] == 1){
 			//対角線手足セットパターン
-			Debug.Log ("Diagnoal");
+			//Debug.Log ("Diagnoal");
 			mode = nowMode;
 		}
 		else if(sensor[PRESS_RIGHT_HAND] == 1 || sensor[PRESS_LEFT_HAND] == 1){
 			//手テスト
-			Debug.Log("ok");
+			//Debug.Log("ok");
 			mode = nowMode;
 		}
 		else if(mode < 3){
 			//落下しそう
-			Debug.Log("Rerease");
+			//Debug.Log("Rerease");
 			mode = 3;
 
 			//Fall();
@@ -399,6 +415,11 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 					transform.localPosition += new Vector3(speed,0,0);
 					break;
 				}
+                if (motionF == null)
+                {
+                    Debug.Log("motionF = null");
+                }
+                motionF.addFunc(speed*10);
 			}
 		}
 
@@ -415,10 +436,16 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 				_stream.Close ();
 				Debug.LogError ("Failed to open Serial Port, already open!");
 			} else {
-				_stream.Open ();
-				_stream.ReadTimeout = 10;
-				_stream.WriteTimeout = 10;
-				Debug.Log ("Open Serial port1");      
+                try {
+                    _stream.Open();
+                    _stream.ReadTimeout = 10;
+                    _stream.WriteTimeout = 10;
+                    Debug.Log("Open Serial port1");
+                }
+                catch (System.IO.IOException)
+                {
+                    Debug.Log("error IOException can not find Arduino");
+                }
 			}
 		}
 

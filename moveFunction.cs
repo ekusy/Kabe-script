@@ -41,7 +41,7 @@ public class moveFunction : MonoBehaviour {
             Debug.Log("reset Left");
             if (moveCount[LEFT_HAND] > 0 && getCount[LEFT_HAND] > 0)
             {
-                //Debug.Log("left move =" + moveCount[LEFT_HAND] + "left count = "+ getCount[LEFT_HAND]);
+                Debug.Log("left move =" + moveCount[LEFT_HAND] + "left count = "+ getCount[LEFT_HAND]);
             }
             moveCount[LEFT_HAND] = 0;
             getCount[LEFT_HAND] = 0;
@@ -54,7 +54,7 @@ public class moveFunction : MonoBehaviour {
             Debug.Log("reset Right");
             if (moveCount[RIGHT_HAND] > 0 && getCount[RIGHT_HAND] > 0)
             {
-                //Debug.Log("right move =" + moveCount[RIGHT_HAND] + "right count = " + getCount[RIGHT_HAND]);
+                Debug.Log("right move =" + moveCount[RIGHT_HAND] + "right count = " + getCount[RIGHT_HAND]);
             }
             moveCount[RIGHT_HAND] = 0;
             getCount[RIGHT_HAND] = 0;
