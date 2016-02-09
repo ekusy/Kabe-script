@@ -79,7 +79,7 @@ public class testFunction : MonoBehaviour {
 
         if (Input.GetKeyDown(KeyCode.C))
             changeFlg = !changeFlg;
-        Debug.Log("changeFlg=" + changeFlg);
+        //Debug.Log("changeFlg=" + changeFlg);
 
     }
 	void ChangeSensorValue(ref int value){

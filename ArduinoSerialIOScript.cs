@@ -43,7 +43,11 @@ public class ArduinoSerialIOScript : MonoBehaviour {
     const int MODE_CEILING = 2;
     const int MODE_DANGER = 3;
     const int MODE_FALL = 4;
+    //const int MODE_ZURIOCHI = 5;
 
+    //センサー値をテスト用関数から受け取るか
+    //trueにした場合testFunction.csのgetTestValue()でダミー値を受け取る
+    bool testFlg = true;
 
 
     int[] sensor = {0,0,1,1,1,1};//
@@ -58,29 +62,19 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 
 	public AudioClip audio1,audio2,audio3,audio4,audio5;
 	AudioSource audioSource;
-	/*
-	1 垂直モード
-	2　水平モード
-	3　落下モード
 
-	A0,A4 = 左手
-	A1,A5 = 右手
-	A2,A6 = 左足
-	A3,A7 = 右足
-
-	*/
 
 	//---------追加--------------
 	testFunction tF;	//テスト用関数　センサー値をキーボードで入力
 	moveFunction mF;	//移動用関数
 	canvusEnable cE;	//GAMEOVERオブジェクト取得用
-    motionFunction motionF;
+    motionFunction motionF; //モーション再生用スクリプト
 	GameObject gameOver;	//ゲームオーバーの表示用
 
 	const float SPEED = 0.1f;	//テスト用移動スピード
 	float fallTimer = 0.0f;	//落下までの時間カウント
 	int nowMode = 1;	//落下前の状態を保持
-	float fallAngle = 0.5f;	//落下時の回転速度
+	float fallAngle = 0.2f;	//落下時の回転速度
 	float serialTimer = 0.0f;
 	float[] drillTimer = {-1.0f,-1.0f,-1.0f};	//ドリルの動作時間計測
 	float[] drill = {3.0f,0.5f,0.5f};	//
@@ -88,11 +82,21 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 	bool first_fall = false;
 	bool startFlg = false;
 	bool safeFlg = true;
+
+    int[,] moveCount = new int[2,20];
+    int moveSum = 0;
+    const int ZURIOCHI = 2000;
+    const float ZURIOCHI_TIME = 2.0f;
+    float zuriochiTimer = -1.0f;
+    bool zuriochiFlg = false;
+
+    int[] speedLog = { 0,0,0,0,0 };
+    bool motionRL = false;
 	//-----------------------
 
 
 
-	SerialPort stream1 = new SerialPort("COM4", 9600 );
+	SerialPort stream1 = new SerialPort("COM4", 9600);
 	//SerialPort stream2 = new SerialPort("COM4", 115200 );
 
 
@@ -109,20 +113,38 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 
 		audioSource = gameObject.GetComponent<AudioSource>();
 
+        for(int i = 0; i < 2; i++)
+        {
+            for(int j = 0; j < 20; j++)
+            {
+                moveCount[i,j] = 0;
+            }
+        }
+
 		first_fall = true;
+
+        Debug.Log("testFlg = " + testFlg);
 	}
 	void Update () {
 		if (Input.GetKeyDown (KeyCode.Space)) {
             Debug.Log("start");
 			startFlg = true;
 		}
-        //--------arduinoから値を受け取るときはreadSensorを、テスト用の値を使うときはtF.GetSensorValuesを使う
-		//readSensor ();
-		try {
-			sensor = tF.GetSensorValues ();	//センサー値(ダミー)を受け取り
-		} catch (NullReferenceException) {
-			Debug.Log ("error sensor");
-		}
+
+        if (!testFlg)
+        {
+            readSensor();
+        }
+        else {
+            try
+            {
+                sensor = tF.GetSensorValues ();	//センサー値(ダミー)を受け取り
+            }
+            catch (NullReferenceException)
+            {
+                Debug.Log("error sensor");
+            }
+        }
 		if (safeFlg) {
             try {
                 tF.testPressValue(ref sensor);
@@ -132,6 +154,7 @@ public class ArduinoSerialIOScript : MonoBehaviour {
                 Debug.Log("error testPress");
             }
 		}
+        tF.testPressValue(ref sensor);
         try {
             tF.testSerialWrite(stream1);
         }
@@ -145,6 +168,14 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 			try {
                 //Debug.Log("speed get");
                 //speed = mF.getSpeed (sensor, preSensor);	//移動判定
+                if (sensor[MOVE_RIGHT_HAND] > sensor[MOVE_LEFT_HAND])
+                {
+                    motionRL = true;
+                }
+                else
+                {
+                    motionRL = false;
+                }
                 speed = mF.getSpeed(sensor); //移動判定
                 //Debug.Log("speed = " + speed);
             } catch (NullReferenceException) {
@@ -210,6 +241,9 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 		for(int i = 0;i<VALUE_NUM;i++){
 			preSensor[i] = sensor[i];
 		}
+
+        addSpeedLog();
+        judcgStaticForm();
 
 	}
 	void judge_fall(){
@@ -345,13 +379,17 @@ public class ArduinoSerialIOScript : MonoBehaviour {
                         sensor[i] = int.Parse(tmpSen[i]);
                         //Debug.Log ("sen"+i+" "+sensor[i]);
                     }
-                    Debug.Log("getValue");
+                    //Debug.Log("right=" + sensor[0] + " left=" + sensor[1]);
+                    Debug.Log(result1);
+                    //Debug.Log("getValue");
                 }
                 catch (FormatException)
                 {
+                    Debug.Log("FormatException");
                 }
                 catch (IndexOutOfRangeException)
                 {
+                    Debug.Log("IndexOutOfRangeException");
                 }
             }
         }
@@ -450,5 +488,76 @@ public class ArduinoSerialIOScript : MonoBehaviour {
 		}
 
 	}
-
+    void addMoveCount() //直近20フレームのモータセンサの値を保持
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            for (int j = 18; j >= 0; j--)
+            {
+                moveCount[i, j + 1] = moveCount[i, j];
+            }
+            moveCount[i, 0] = sensor[i];
+        }
+    }
+    bool judgeZuriochi()    //直近20フレームのセンサ値を合計、ずり落ち判定
+    {
+        moveSum = 0;
+        for (int i = 0; i < 2; i++)
+        {
+            for (int j = 0; j < 20; j++)
+            {
+                moveSum += moveCount[i, j];
+            }
+        }
+        if (moveSum > ZURIOCHI)
+        {
+            writeArduino(HAMMOK_DOWN);
+            return true;
+        }
+        else
+            return false;
+    }
+    void zuriochiMove()
+    {
+        if(zuriochiTimer >= 0.0f)
+        {
+            zuriochiTimer += Time.deltaTime;
+            switch (mode)
+            {
+                case 1:
+                    transform.localPosition += new Vector3(0, -0.05f, 0);
+                    break;
+                case 2:
+                    transform.localPosition += new Vector3(-0.05f, 0, 0);
+                    break;
+            }
+        }
+        if(zuriochiTimer > ZURIOCHI_TIME)
+        {
+            zuriochiFlg = false;
+            zuriochiTimer = 0.0f;
+            writeArduino(HAMMOK_STOP);
+        }
+    }
+    void addSpeedLog()
+    {
+        for (int j = 3; j >= 0; j--)
+        {
+            speedLog[j + 1] = speedLog[j];
+        }
+        speedLog[0] = (int)(speed*1000.0f);
+    }
+    void judcgStaticForm()
+    {
+        int sum = 0;
+        for(int i = 0; i < 5; i++)
+        {
+            sum += speedLog[i];
+        }
+        if(sum == 0)
+        {
+            
+            motionF.staticForm(motionRL);
+        }
+    }
 }
